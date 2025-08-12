@@ -4,3 +4,57 @@
 2025-08-12 09:25:44 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
 2025-08-12 09:25:44 - api_routes - ERROR - api_routes.py:43 - Error: Помилка виконання алгоритму: (1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%s AND date >= CURDATE() - INTERVAL 10 DAY ORDER BY date DESC' at line 1")
 2025-08-12 09:26:38 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 11:41:27 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 11:43:45 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 11:43:46 - api_routes - ERROR - api_routes.py:58 - Error: 0001.HK: 1 validation error for AlgoResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value=[('0001.HK', Decimal('51....etime.date(2025, 8, 4))], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.5/v/dict_type
+2025-08-12 11:44:16 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 11:44:16 - api_routes - ERROR - api_routes.py:58 - Error: 0001.HK: 1 validation error for AlgoResponse
+data
+  Input should be a valid dictionary [type=dict_type, input_value=[('0001.HK', Decimal('51....etime.date(2025, 8, 4))], input_type=list]
+    For further information visit https://errors.pydantic.dev/2.5/v/dict_type
+2025-08-12 11:49:42 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 12:10:40 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 12:16:07 - api_routes - INFO - api_routes.py:31 - Stockname: 0002.HK
+2025-08-12 12:20:34 - api_routes - INFO - api_routes.py:31 - Stockname: 0002.HK
+2025-08-12 12:21:24 - api_routes - INFO - api_routes.py:31 - Stockname: 0002.HK
+2025-08-12 12:26:23 - api_routes - INFO - api_routes.py:31 - Stockname: 0002.HK
+2025-08-12 12:26:58 - api_routes - INFO - api_routes.py:31 - Stockname: 0003.HK
+2025-08-12 12:30:40 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 12:30:53 - api_routes - INFO - api_routes.py:31 - Stockname: 0011.HK
+2025-08-12 12:31:19 - api_routes - INFO - api_routes.py:31 - Stockname: 0012.HK
+2025-08-12 12:33:02 - api_routes - INFO - api_routes.py:31 - Stockname: 0013.HK
+2025-08-12 12:33:39 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:50:43 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:52:21 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:53:24 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:55:00 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:56:59 - api_routes - INFO - api_routes.py:31 - Stockname: 0014.HK
+2025-08-12 12:57:59 - api_routes - INFO - api_routes.py:31 - Stockname: 0011.HK
+2025-08-12 12:59:23 - api_routes - INFO - api_routes.py:31 - Stockname: 0010.HK
+2025-08-12 13:05:28 - api_routes - INFO - api_routes.py:31 - Stockname: 0010.HK
+2025-08-12 13:06:44 - api_routes - INFO - api_routes.py:32 - Stockname: 0010.HK
+2025-08-12 13:07:52 - api_routes - INFO - api_routes.py:32 - Stockname: 0010.HK
+2025-08-12 13:32:09 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:40:00 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:41:54 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:41:54 - api_routes - ERROR - api_routes.py:60 - Error: 0001.HK: name 'HKAlgoTA' is not defined
+2025-08-12 14:42:20 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:49:13 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:51:33 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:55:18 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 14:59:10 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:02:29 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:06:29 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:08:11 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:12:31 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:17:02 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:20:07 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:21:58 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:24:27 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:25:02 - api_routes - INFO - api_routes.py:32 - Stockname: 0002.HK
+2025-08-12 15:29:24 - api_routes - INFO - api_routes.py:32 - Stockname: 0002.HK
+2025-08-12 15:29:48 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
+2025-08-12 15:33:12 - api_routes - INFO - api_routes.py:32 - Stockname: 0001.HK
