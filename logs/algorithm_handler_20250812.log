@@ -1,0 +1,14 @@
+2025-08-12 08:44:22 - algorithm_handler - INFO - algorithm_handler.py:17 - Запуск алгоритму для акції: AAPL
+2025-08-12 08:44:22 - algorithm_handler - INFO - algorithm_handler.py:31 - Початок обробки акції AAPL
+2025-08-12 08:44:22 - algorithm_handler - INFO - algorithm_handler.py:46 - Алгоритм завершено успішно для AAPL
+2025-08-12 08:51:15 - algorithm_handler - INFO - hk_algo.py:17 - Запуск алгоритму для акції: AAPL
+2025-08-12 08:51:15 - algorithm_handler - INFO - hk_algo.py:31 - Початок обробки акції AAPL
+2025-08-12 08:51:16 - algorithm_handler - INFO - hk_algo.py:46 - Алгоритм завершено успішно для AAPL
+2025-08-12 08:51:31 - algorithm_handler - INFO - hk_algo.py:17 - Запуск алгоритму для акції: 0001.HK
+2025-08-12 08:51:31 - algorithm_handler - INFO - hk_algo.py:31 - Початок обробки акції 0001.HK
+2025-08-12 08:51:31 - algorithm_handler - INFO - hk_algo.py:46 - Алгоритм завершено успішно для 0001.HK
+2025-08-12 09:25:44 - algorithm_handler - INFO - hk_algo.py:26 - Запуск алгоритму для акції: 0001.HK
+2025-08-12 09:25:44 - algorithm_handler - ERROR - hk_algo.py:65 - Помилка під час виконання алгоритму для 0001.HK: (1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%s AND date >= CURDATE() - INTERVAL 10 DAY ORDER BY date DESC' at line 1")
+2025-08-12 09:26:38 - algorithm_handler - INFO - hk_algo.py:26 - Запуск алгоритму для акції: 0001.HK
+2025-08-12 09:26:38 - algorithm_handler - INFO - hk_algo.py:46 - Початок обробки акції 0001.HK
+2025-08-12 09:26:39 - algorithm_handler - INFO - hk_algo.py:61 - Алгоритм завершено успішно для 0001.HK

@@ -1,0 +1,6 @@
+2025-08-12 08:51:15 - api_routes - INFO - api_routes.py:31 - Stockname: AAPL
+2025-08-12 08:51:31 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 09:25:42 - api_routes - INFO - api_routes.py:25 - Health check!
+2025-08-12 09:25:44 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
+2025-08-12 09:25:44 - api_routes - ERROR - api_routes.py:43 - Error: Помилка виконання алгоритму: (1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%s AND date >= CURDATE() - INTERVAL 10 DAY ORDER BY date DESC' at line 1")
+2025-08-12 09:26:38 - api_routes - INFO - api_routes.py:31 - Stockname: 0001.HK
