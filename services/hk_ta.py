@@ -47,25 +47,28 @@ class HK_TA_Algo:
             
             self.is_running = True
 
-            from_chan_api = await fetch_hkex_api_data(stockname, tradeDay)
-            if from_chan_api.get("status") == "error":
-                return from_chan_api
+            # from_chan_api = await fetch_hkex_api_data(stockname, tradeDay)
+            # if from_chan_api.get("status") == "error":
+            #     return from_chan_api
             
+            # query = f"""
+            # SELECT symbol, high, low, close, date 
+            # FROM hkex_stock_price 
+            # WHERE symbol = '{stockname}' AND date <= '{tradeDay}'
+            # AND date >= CURDATE() - INTERVAL 400 DAY 
+            # AND WEEKDAY(date) < 5 
+            # ORDER BY date DESC
+            # LIMIT 500
+            # """
             query = f"""
-            SELECT symbol, high, low, close, date 
-            FROM hkex_stock_price 
-            WHERE symbol = '{stockname}' AND date <= '{tradeDay}'
-            AND date >= CURDATE() - INTERVAL 400 DAY 
-            AND WEEKDAY(date) < 5 
-            ORDER BY date DESC
-            LIMIT 500
+            CALL get_symbol_adjusted_data('{stockname}');
             """
 
             with self.db.cursor() as cur:
                 cur.execute(query)
                 rows = cur.fetchall()
-
-                if not any(row[4].strftime('%Y-%m-%d') == tradeDay for row in rows):
+                
+                if not any(row[2].strftime('%Y-%m-%d') == tradeDay for row in rows):
                     return {
                         "status": "error",
                         "message": f"There is no data for {stockname} at day: {tradeDay} in database",
@@ -75,12 +78,12 @@ class HK_TA_Algo:
                 
                 data_for_df = []
                 for row in rows:
+                    logger.info(f"Row: {row}")
                     data_for_df.append({
-                        "symbol": row[0],
-                        "high": float(row[1]),
-                        "low": float(row[2]), 
-                        "close": float(row[3]),
-                        "date": row[4]
+                        "high": float(row[6]),
+                        "low": float(row[9]), 
+                        "close": float(row[12]),
+                        "date": row[2]
                     })
 
             if not data_for_df:
@@ -134,7 +137,7 @@ class HK_TA_Algo:
                         "message": f"Algorithm successfully completed for {stockname}",
                         "stockname": stockname,
                         "data_from_sergio_ta": indicators,
-                        "data_from_api_ta": from_chan_api
+                        # "data_from_api_ta": from_chan_api
                         
                     }
             

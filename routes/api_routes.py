@@ -21,7 +21,7 @@ class AlgoResponse(BaseModel):
     tradeDay: str
     message: str
     data_from_sergio_ta: Dict[str, Any] = {}
-    data_from_api_ta: Dict[str, Any] = {}
+    # data_from_api_ta: Dict[str, Any] = {}
 
 @router.get("/ping", response_model=Dict[str, str])
 async def health_check():
@@ -55,7 +55,7 @@ async def process_stock(request: SalgoRequest):
             tradeDay=request.tradeDay,
             message=result["message"],
             data_from_sergio_ta=result.get("data_from_sergio_ta", []),
-            data_from_api_ta=result.get("data_from_api_ta", [])
+            # data_from_api_ta=result.get("data_from_api_ta", [])
         )
         
     except HTTPException:
