@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     serhio_db_user: str = "reader"
     serhio_db_pass: str = "password" 
 
+    api_key: str 
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

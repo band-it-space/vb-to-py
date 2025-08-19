@@ -163,7 +163,7 @@ async def fetch_hkex_api_data(stock_code: str, tradeDay: str) -> Any:
         }
         
         headers = {
-            'x-api-key': '20250702_hkex_data_v'
+            'x-api-key': settings.api_key
         }
 
         response = requests.get(api_url, params=params, headers=headers, timeout=30)
@@ -307,7 +307,7 @@ async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, periods=(5, 20, 60
         }
         
         headers = {
-            'x-api-key': '20250702_hkex_data_v'
+            'x-api-key': settings.api_key
         }
 
         response = requests.get(api_url, params=params, headers=headers, timeout=30)
