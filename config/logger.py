@@ -32,7 +32,7 @@ def setup_logger(name: str = "fastapi_app", level: str = "INFO") -> logging.Logg
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    log_file = log_dir / f"{name}_{datetime.now().strftime('%Y%m%d')}.log"
+    log_file = log_dir/f"{name}.log"
     file_handler = RotatingFileHandler(
         log_file,
         maxBytes=10*1024*1024,  # 10MB
