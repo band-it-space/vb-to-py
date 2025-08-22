@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     app_description: str = "FastAPI application with hot reload in Docker"
     
+    # Constants for file paths
+    data_dir: str = "data"
+    signal_file_name: str = "signal_hkex_energy.csv"
     
     host: str = "0.0.0.0"
     port: int = 8000
