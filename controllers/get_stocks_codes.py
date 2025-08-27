@@ -26,8 +26,8 @@ def is_date_today(date_str: str) -> bool:
 
 def is_numeric_code(value: str) -> bool:
     try:
-        int(value.strip())
-        return True
+        code = int(value.strip())
+        return code <= 9999
     except ValueError:
         return False
 
