@@ -75,7 +75,7 @@ class HK_Energy_Algo:
                 
                 if idx >= 66: #with at least 66 bars for calculation
                     
-                    #########################################################################
+                    #####################################
                     # E1. New high in the past {20D} and close is higher than [Low + {0.65} * (High - Low)]
                     # high > highest(high, 20)[1] and
                     # close > (high - low) * 0.65 + low
@@ -97,40 +97,36 @@ class HK_Energy_Algo:
                     else:
                         E1 = "0"
                     
-                    #########################################################################
+                    #####################################
                     # E2. StochRSI(10) > 0.5
                     # _lewis_StochRSI(10) > 0.5
+
+                    period_rsi = 10
+                    period_stoch = 10
                     
-                    # RSI(10) - need at least 10 periods
+                    if idx >= (period_rsi + period_stoch - 1):
+                        rsi_values = self._calculate_rsi(close, idx, period_rsi)
                     
-                    rsi_values = self._calculate_rsi(close, idx, 10)
-                    rsi_val = rsi_values[-1]  # Current RSI value
-                        
-                    # Get RSI values for the past 10 periods for StochRSI calculation
-                    if len(rsi_values) >= 10:
-                        recent_rsi = rsi_values[-10:]  # Last 10 RSI values
-                            
-                        # highest(RSI, 10)
-                        max_val = max(recent_rsi)
-                            
-                        # lowest(RSI, 10)  
-                        min_val = min(recent_rsi)
-                            
-                        # Calculate StochRSI
-                        if min_val == max_val:
-                            stochrsi = 0
-                        else:
-                            stochrsi = (rsi_val - min_val) / (max_val - min_val)
-                            
-                        # Check E2 condition
-                        if stochrsi > 0.5:
-                            E2 = "1"
+                        rsi_val = rsi_values[idx]
+                    
+                        start_pos = idx - (period_stoch - 1)
+                        end_pos = idx + 1
+                    
+                        window = [v for v in rsi_values[start_pos:end_pos] if not (v != v)]
+                        if len(window) == period_stoch:
+                            max_val = max(window)
+                            min_val = min(window)
+                            if max_val == min_val:
+                                stochrsi = 0.0
+                            else:
+                                stochrsi = (rsi_val - min_val) / (max_val - min_val)
+                            E2 = "1" if stochrsi > 0.5 else "0"
                         else:
                             E2 = "0"
                     else:
                         E2 = "0"
-                    
-                    #########################################################################
+
+                    #####################################
                     # E3. SLOPE(Close, {66}) > 0
                     # (close - close[66])/66
                     
@@ -139,7 +135,7 @@ class HK_Energy_Algo:
                     else:
                         E3 = "0"
                     
-                    #########################################################################
+                    #####################################
                     # E4. Price change over 33 days outperforming SPY
                     # close/close[33] > close data(2)/close[33] data(2)
                     
@@ -164,7 +160,7 @@ class HK_Energy_Algo:
                     except ValueError:
                         E4 = "0"
                     
-                    #########################################################################
+                    #####################################
                     # E5. Latest price is at top half of 5-day range and current price > price of 5 days ago 
                     # and current price is less than 7% drawdown from 66D high
                     # (close - lowest(low, 5))/(highest(high, 5) - lowest(low, 5)) > 0.5
@@ -271,6 +267,7 @@ class HK_Energy_Algo:
                 continue
                 
             try:
+                
                 record_date = datetime.strptime(record.date, "%Y-%m-%d")
                 
                 if record_date < load_data_date or record_date < min_date:
@@ -303,40 +300,52 @@ class HK_Energy_Algo:
     
     def _calculate_rsi(self, prices: List[float], current_idx: int, period: int) -> List[float]:
         if current_idx < period:
-            return []
-        
-        # Get price data up to current index
+            return [float('nan')] * (current_idx + 1)
+    
         price_data = prices[:current_idx + 1]
-        
+        rsi_values = [float('nan')] * len(price_data)  # Initialize with NaN
+    
         # Calculate price changes
         deltas = []
         for i in range(1, len(price_data)):
             deltas.append(price_data[i] - price_data[i-1])
         
+        if len(deltas) < period:
+            return rsi_values
+        
         # Separate gains and losses
         gains = [max(delta, 0) for delta in deltas]
         losses = [abs(min(delta, 0)) for delta in deltas]
         
-        rsi_values = []
+        # Calculate initial average (first period using SMA)
+        initial_avg_gain = sum(gains[:period]) / period
+        initial_avg_loss = sum(losses[:period]) / period
         
-        # Calculate RSI for each period
-        for i in range(period - 1, len(deltas)):
-            # Get the period window
-            period_gains = gains[max(0, i - period + 1):i + 1]
-            period_losses = losses[max(0, i - period + 1):i + 1]
+        # Calculate first RSI at index 'period'
+        if initial_avg_loss == 0:
+            rsi = 100.0
+        else:
+            rs = initial_avg_gain / initial_avg_loss
+            rsi = 100.0 - (100.0 / (1.0 + rs))
+        
+        rsi_values[period] = rsi  # First valid RSI at index 'period'
+        
+        # Continue with Wilder's Smoothing
+        avg_gain = initial_avg_gain
+        avg_loss = initial_avg_loss
+        
+        for i in range(period, len(deltas)):  # Start from period, not period+1
+            # Wilder's Smoothing
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
             
-            # Calculate average gain and loss
-            avg_gain = sum(period_gains) / period
-            avg_loss = sum(period_losses) / period
-            
-            # Calculate RSI
             if avg_loss == 0:
-                rsi = 100
+                rsi = 100.0
             else:
                 rs = avg_gain / avg_loss
-                rsi = 100 - (100 / (1 + rs))
+                rsi = 100.0 - (100.0 / (1.0 + rs))
             
-            rsi_values.append(rsi)
+            rsi_values[i + 1] = rsi  # RSI for price at index i+1
         
         return rsi_values
 

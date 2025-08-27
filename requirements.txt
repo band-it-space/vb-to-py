@@ -7,3 +7,6 @@ pymysql
 pandas
 requests
 python-dateutil
+openpyxl
+
+aiomysql==0.2.0

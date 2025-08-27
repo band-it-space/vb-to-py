@@ -1,6 +1,9 @@
 from pydantic import BaseModel
 from typing import Dict, Any, List
 
+class CodeesResponse(BaseModel):
+    date: str
+    codes: List[str]
 
 class AlgoRequest(BaseModel):
     stockname: str
@@ -38,3 +41,9 @@ class EnergyAlgoResponse(BaseModel):
     status: str
     message: str
     indicators: List[Dict[str, Any]]
+
+
+
+class EnergyAlgoRequestTest(BaseModel):
+    stock_code: str
+    trade_day: str
