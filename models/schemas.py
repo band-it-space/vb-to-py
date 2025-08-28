@@ -6,8 +6,8 @@ class CodeesResponse(BaseModel):
     codes: List[str]
 
 class AlgoRequest(BaseModel):
-    stockname: str
-    tradeDay: str
+    stock_code: str
+    trade_day: str
 
 
 class AlgoResponse(BaseModel):

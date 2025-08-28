@@ -1,13 +1,13 @@
-from models.schemas import EnergyStockRecord
+import os
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import os
-
 from typing import Dict, Any, List
+
 from config.logger import setup_logger
 from config.settings import Settings
 from services.db_service import Database_Service
+from models.schemas import EnergyStockRecord
 
 settings = Settings()
 algo_logger = setup_logger("energy_algo")
@@ -129,12 +129,12 @@ class HK_Energy_Algo:
                     #####################################
                     # E3. SLOPE(Close, {66}) > 0
                     # (close - close[66])/66
-                    
+
                     if (close[idx] - close[idx - 66]) / 66 > 0:
                         E3 = "1"
                     else:
                         E3 = "0"
-                    
+
                     #####################################
                     # E4. Price change over 33 days outperforming SPY
                     # close/close[33] > close data(2)/close[33] data(2)
@@ -176,17 +176,16 @@ class HK_Energy_Algo:
                     # highest(high, 5) - get max high of last 5 days including current
                     max5 = max(high[start_idx_5:idx + 1])
                         
-                    # lowest(low, 66) - get min low of last 66 days including current
-                    start_idx_66 = max(0, idx - 65)  # Last 66 days including current
-                    min66 = min(low[start_idx_66:idx + 1])
+                    # lowest(low, 250) - get min low of last 250 days including current
+                    start_idx_250 = max(0, idx - 249)  # Last 250 days including current
                         
-                    # highest(high, 66) - get max high of last 66 days including current
-                    max66 = max(high[start_idx_66:idx + 1])
+                    # highest(high, 250) - get max high of last 250 days including current
+                    max250 = max(high[start_idx_250:idx + 1])
                         
                     # Check all three E5 conditions
                     condition1 = (close[idx] - min5) / (max5 - min5) > 0.5 if max5 != min5 else False
                     condition2 = close[idx] - close[idx - 5] > 0 if idx >= 5 else False
-                    condition3 = (max66 - close[idx]) / max66 < 0.07 if max66 != 0 else False
+                    condition3 = (max250 - close[idx]) / max250 < 0.07 if max250 != 0 else False
                         
                     if condition1 and condition2 and condition3:
                         E5 = "1"
@@ -236,8 +235,6 @@ class HK_Energy_Algo:
                 "message": f"Algorithm successfully completed for {stockname}",
                 "indicators": all_indicators
             }
-            
-            logger.info(f"Algorithm successfully completed for {stockname}.Total: {len(all_indicators)}. Indicators: {all_indicators}")
             return result
             
         except Exception as e:
@@ -348,5 +345,6 @@ class HK_Energy_Algo:
             rsi_values[i + 1] = rsi  # RSI for price at index i+1
         
         return rsi_values
-
+    
+    
 HK_Energy_TA = HK_Energy_Algo()

@@ -46,7 +46,13 @@ class HK_TA_Algo:
             CALL get_symbol_adjusted_data('{stockname}');
             """
             rows = await db_service.execute_query(query)
-
+            if not rows:
+                return {
+                    "status": "error",
+                    "message": f"There is no data for {stockname} in database",
+                    "stockname": stockname,
+                    "tradeDay": tradeDay
+                }
             if not any(row[2].strftime('%Y-%m-%d') == tradeDay for row in rows):
                 return {
                     "status": "error",

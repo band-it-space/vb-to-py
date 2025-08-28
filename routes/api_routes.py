@@ -25,15 +25,15 @@ async def health_check():
 @router.post("/start-hk-ta", response_model=AlgoResponse)
 async def process_stock(request: AlgoRequest):
     try:    
-        if not request.stockname or len(request.stockname.strip()) == 0 or not request.tradeDay or len(request.tradeDay.strip()) == 0:
+        if not request.stock_code or len(request.stock_code.strip()) == 0 or not request.trade_day or len(request.trade_day.strip()) == 0:
             logger.warning("stockname and tradeDay required!")
             raise HTTPException(
                 status_code=400, 
                 detail="Stockname and tradeDay required!"
             )
-        logger.info(f"Stockname: {request.stockname}, TradeDay: {request.tradeDay}")
+        logger.info(f"Stockname: {request.stock_code}, TradeDay: {request.trade_day}")
 
-        result = await HK_TA.start(request.stockname.strip(), request.tradeDay.strip())
+        result = await HK_TA.start(request.stock_code.strip(), request.trade_day.strip())
         
         if result["status"] == "error":
             logger.error(f"Error: {result['message']}")
@@ -44,8 +44,8 @@ async def process_stock(request: AlgoRequest):
         
         return AlgoResponse(
             status="success",
-            stockname=request.stockname,
-            tradeDay=request.tradeDay,
+            stockname=request.stock_code,
+            tradeDay=request.trade_day,
             message=result["message"],
             data_from_sergio_ta=result.get("data_from_sergio_ta", []),
             # data_from_api_ta=result.get("data_from_api_ta", [])
