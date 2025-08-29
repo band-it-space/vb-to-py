@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 class CodeesResponse(BaseModel):
     date: str
@@ -47,3 +47,31 @@ class EnergyAlgoResponse(BaseModel):
 class EnergyAlgoRequestTest(BaseModel):
     stock_code: str
     trade_day: str
+
+
+# Queue-related schemas
+class TaskRequest(BaseModel):
+    stock_code: str
+    trade_day: str
+
+
+class TaskResponse(BaseModel):
+    message: Optional[str] = None
+
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    status: str
+    result: Optional[Dict[str, Any]] = None
+    info: Optional[Dict[str, Any]] = None
+
+
+class HKTaCancelResponse(BaseModel):
+    task_id: str
+    status: str
+    error: Optional[str] = None
+
+class CheckHkTaResponse(BaseModel):
+    task_id: str
+    status: str
+    message: Optional[str] = None

@@ -10,3 +10,8 @@ python-dateutil
 openpyxl
 
 aiomysql==0.2.0
+
+# RabbitMQ and Queue dependencies
+celery==5.3.4
+kombu==5.3.4
+amqp==5.2.0

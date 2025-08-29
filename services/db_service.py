@@ -1,23 +1,15 @@
 import pymysql
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Dict, Any, Optional
 from config.logger import setup_logger
-from config.settings import settings
 
 
 db_logger = setup_logger("db_service")
 logger = db_logger
 
-db_params = {
-    "db": settings.serhio_db,
-    "user": settings.serhio_db_user,
-    "password": settings.serhio_db_pass,
-    "host": settings.serhio_db_host,
-    "port": settings.serhio_db_port,
-}
-
 
 class Database_Service:
-    def __init__(self):
+    def __init__(self, db_params: Dict[str, Any]):
+        self.db_params = db_params
         self.connection = None
         self._connect()
 
@@ -26,7 +18,7 @@ class Database_Service:
             if self.connection:
                 self._close()
             
-            self.connection = pymysql.connect(**db_params)
+            self.connection = pymysql.connect(**self.db_params)
             logger.info("Database connected successfully")
         except Exception as e:
             logger.error(f"Database connection failed: {e}")

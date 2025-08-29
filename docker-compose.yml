@@ -1,6 +1,18 @@
 version: "3.8"
 
 services:
+    rabbitmq:
+        image: rabbitmq:3-management-alpine
+        ports:
+            - "5672:5672" # AMQP port
+            - "15672:15672" # Management UI port
+        environment:
+            - RABBITMQ_DEFAULT_USER=admin
+            - RABBITMQ_DEFAULT_PASS=password
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+        restart: unless-stopped
+
     fastapi-app:
         build: .
         ports:
@@ -11,5 +23,25 @@ services:
         environment:
             - PYTHONPATH=/app
             - PYTHONUNBUFFERED=1
+            - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672//
         restart: unless-stopped
         command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
+        depends_on:
+            - rabbitmq
+
+    celery-worker:
+        build: .
+        volumes:
+            - .:/app
+            - /app/__pycache__
+        environment:
+            - PYTHONPATH=/app
+            - PYTHONUNBUFFERED=1
+            - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672//
+        restart: unless-stopped
+        command: celery -A services.queue_service worker --loglevel=info
+        depends_on:
+            - rabbitmq
+
+volumes:
+    rabbitmq_data:

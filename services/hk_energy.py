@@ -6,17 +6,16 @@ from typing import Dict, Any, List
 
 from config.logger import setup_logger
 from config.settings import Settings
-from services.db_service import Database_Service
+
 from models.schemas import EnergyStockRecord
 
 settings = Settings()
 algo_logger = setup_logger("energy_algo")
 logger = algo_logger
 
-db_service = Database_Service()
 
 # Constants for file paths
-DATA_DIR = settings.data_dir
+DATA_DIR = settings.base_path
 SIGNAL_FILE_NAME = settings.signal_file_name
 
 class HK_Energy_Algo:

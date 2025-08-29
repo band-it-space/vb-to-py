@@ -10,8 +10,15 @@ from services.db_service import Database_Service
 algo_logger = setup_logger("ta_algo")
 logger = algo_logger
 
+db_params = {
+    "db": settings.serhio_db,
+    "user": settings.serhio_db_user,
+    "password": settings.serhio_db_pass,
+    "host": settings.serhio_db_host,
+    "port": settings.serhio_db_port,
+}
 
-db_service = Database_Service()
+db_service = Database_Service(db_params)
 
 class HK_TA_Algo:
     def __init__(self):
