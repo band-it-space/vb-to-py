@@ -10,8 +10,19 @@ class Settings(BaseSettings):
     
     # Constants for file paths
     base_path: str = str(Path(__file__).parent.parent / "data")
-    signal_file_name: str = "signal_hkex_energy.csv"
     
+    signal_file_name: str = "signal_hkex_energy"
+    hk_energy_token_file_name: str = "hk_energy_token"
+    hk_ta_token_file_name: str = "hk_ta_token"
+    signals_hkex_ta1_file_name: str = "signals_hkex_ta1"
+    signals_hkex_ta2_file_name: str = "signals_hkex_ta2"
+
+    # test db tables
+    test_db_table_ta1: str = "test_db_table_ta1"
+    test_db_table_ta2: str = "test_db_table_ta2"
+    test_db_table_energy: str = "test_db_table_energy"
+
+
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = True
@@ -48,7 +59,7 @@ class Settings(BaseSettings):
     
     # Celery settings
     celery_broker_url: str = "amqp://admin:password@localhost:5672//"
-    celery_result_backend: str = "rpc://"
+    celery_result_backend: str = "redis://redis:6379/0"
 
     class Config:
         env_file = ".env"

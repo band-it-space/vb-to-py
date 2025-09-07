@@ -1,18 +1,23 @@
-from controllers.get_stocks_codes import get_stocks_codes
-from controllers.hk_energy import hk_energy_controller
-from controllers.hk_ta.cancel_task import hk_ta_cancel_task
-from controllers.hk_ta.init_task import hk_ta_initialise
+from celery import chord
+from controllers.hk_energy.hk_energy_init_task import hk_energy_initialise
 from fastapi import APIRouter, HTTPException
+from typing import Dict
+
+from controllers.get_stocks_codes import get_stocks_codes
+from controllers.hk_energy.hk_energy import hk_energy_controller
+from controllers.hk_ta.cancel_task import hk_ta_cancel_task
+from controllers.hk_ta.hk_ta_init_task import hk_ta_initialise
+from controllers.files_controller import download_csv_files
+
+
 from models.schemas import (
     AlgoRequest, AlgoResponse,  EnergyAlgoResponse, 
-    EnergyAlgoRequestTest,  CodeesResponse, HKTaCancelResponse,
-    TaskRequest, TaskResponse,
-    CheckHkTaResponse
+    EnergyAlgoRequestTest,  CodeesResponse, HKEnergyResponse, HKTaCancelResponse, TaskQueueResponse, HKEnergyRequest,
+    HKTaCheckResponse
 )
 
-from typing import Dict
 from services.hk_ta import HK_TA
-from services.queue_service import cancel_task, queue_check_hk_ta, process_hk_ta_task
+from services.queue_service import process_hk_ta_task, clear_hk_ta_token
 from config.logger import setup_logger
 
 
@@ -111,40 +116,37 @@ async def get_codes():
         return {"date": "", "codes": []}
 
 
-# Queue endpoints
-@router.post("/queue/hk-energy", response_model=TaskResponse)
-async def queue_hk_energy(request: TaskRequest):
-    """Queue HK Energy analysis task"""
+
+# HK Energy
+@router.post("/hk-energy", response_model=HKEnergyResponse)
+async def hk_energy(request: HKEnergyRequest):
     try:
-        if not request.stock_code or len(request.stock_code.strip()) == 0 or not request.trade_day or len(request.trade_day.strip()) == 0:
+        logger.info(f"Starting HK Energy !!!")
+
+        if not request.trade_day or len(request.trade_day.strip()) == 0:
             logger.warning("Missing or invalid required fields!")
             raise HTTPException(
                 status_code=400, 
                 detail="Missing or invalid required fields!"
             )
 
-        result = queue_hk_energy_analysis(request.stock_code.strip(), request.trade_day.strip())
+        result = await hk_energy_initialise(request.trade_day.strip())
         
-        return TaskResponse(
+        return HKEnergyResponse(
             task_id=result["task_id"],
-            status=result["status"],
-            stock_code=result["stock_code"],
-            trade_day=result["trade_day"],
-            message=f"HK Energy analysis queued for {request.stock_code}"
-        )
+            status="QUEUED",
+            message=result["message"]
+        )   
         
     except Exception as e:
-        logger.error(f"Error queueing HK Energy task: {str(e)}")
+        logger.error(f"Error starting HK Energy check: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error queueing task: {str(e)}"
+            detail=f"Error starting HK Energy check: {str(e)}"
         )
 
-
-
-
 # HK TA
-@router.get("/hk-ta", response_model=CheckHkTaResponse)
+@router.get("/hk-ta", response_model=HKTaCheckResponse)
 async def check_hk_ta():
     """
     Start HK TA database check with retry mechanism
@@ -155,7 +157,7 @@ async def check_hk_ta():
         
         result = await hk_ta_initialise()
         
-        return CheckHkTaResponse(
+        return HKTaCheckResponse(
             task_id=result["task_id"],
             status="QUEUED",
             message=result["message"]
@@ -168,7 +170,30 @@ async def check_hk_ta():
             detail=f"Error starting HK TA check: {str(e)}"
         )
 
-@router.delete("/queue/hk-ta/cancel/{task_id}", response_model=HKTaCancelResponse)
+@router.get("/hk-ta/queue", response_model=TaskQueueResponse)
+async def queue_hk_ta():
+    """Queue HK TA analysis task"""
+    try:
+        response_data = await get_stocks_codes()
+
+        # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]]
+        tasks = [process_hk_ta_task.s(code, "2025-09-03") for code in response_data["codes"]]  #! REMOVE
+
+        # chord(tasks)(clear_hk_ta_token.s(response_data["date"]))
+        chord(tasks)(clear_hk_ta_token.s("2025-09-03")) #! REMOVE
+
+        return TaskQueueResponse(
+            message=f"HK TA analysis started for {response_data['date']}. Total codes: {len(response_data['codes'])}."
+        )
+        
+    except Exception as e:
+        logger.error(f"Error queueing HK TA task: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error queueing task: {str(e)}"
+        )
+
+@router.delete("/hk-ta/queue/cancel/{task_id}", response_model=HKTaCancelResponse)
 async def cancel_task_endpoint(task_id: str):
     """Cancel a queued task"""
     try:
@@ -181,23 +206,10 @@ async def cancel_task_endpoint(task_id: str):
             detail=f"Error cancelling task: {str(e)}"
         )
 
-@router.get("/queue/hk-ta", response_model=TaskResponse)
-async def queue_hk_ta():
-    """Queue HK TA analysis task"""
-    try:
-        response_data = await get_stocks_codes()
-        for code in response_data["codes"][:10]:
-            # process_hk_ta_task.delay(code, response_data["date"])
-            process_hk_ta_task.delay(code, '2025-08-29')
 
-        return TaskResponse(
-            message=f"HK TA analysis started for {response_data['date']}. Total codes: {len(response_data['codes'])}."
-        )
-        
-    except Exception as e:
-        logger.error(f"Error queueing HK TA task: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error queueing task: {str(e)}"
-        )
-
+@router.get("/files")
+async def get_files():
+    """
+    Download CSV files as ZIP archive from the data directory
+    """
+    return await download_csv_files()

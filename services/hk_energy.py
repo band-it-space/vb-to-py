@@ -15,8 +15,8 @@ logger = algo_logger
 
 
 # Constants for file paths
-DATA_DIR = settings.base_path
-SIGNAL_FILE_NAME = settings.signal_file_name
+# DATA_DIR = settings.base_path
+# SIGNAL_FILE_NAME = settings.signal_file_name
 
 class HK_Energy_Algo:
     def __init__(self):
@@ -213,21 +213,21 @@ class HK_Energy_Algo:
                     })
             
             # Generate CSV content from all_indicators for file saving
-            if all_indicators:
-                # Ensure data directory exists
-                os.makedirs(DATA_DIR, exist_ok=True)
+            # if all_indicators:
+            #     # Ensure data directory exists
+            #     os.makedirs(DATA_DIR, exist_ok=True)
                 
-                # Create full file path
-                signal_file_path = os.path.join(DATA_DIR, SIGNAL_FILE_NAME)
+            #     # Create full file path
+            #     signal_file_path = os.path.join(DATA_DIR, SIGNAL_FILE_NAME)
                 
-                csv_lines = []
-                for record in all_indicators:
-                    csv_line = f"{record['stock_code']},{record['date']},66,{record['E1']},{record['E2']},{record['E3']},{record['E4']},{record['E5']},\\N,{record['is_latest']}\n"
-                    csv_lines.append(csv_line)
+            #     csv_lines = []
+            #     for record in all_indicators:
+            #         csv_line = f"{record['stock_code']},{record['date']},66,{record['E1']},{record['E2']},{record['E3']},{record['E4']},{record['E5']},\\N,{record['is_latest']}\n"
+            #         csv_lines.append(csv_line)
                 
-                output_content = "".join(csv_lines)
-                with open(signal_file_path, "a", encoding="utf-8") as f:
-                    f.write(output_content)
+            #     output_content = "".join(csv_lines)
+            #     with open(signal_file_path, "a", encoding="utf-8") as f:
+            #         f.write(output_content)
             
             result = {
                 "status": "success",

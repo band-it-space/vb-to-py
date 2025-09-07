@@ -13,6 +13,12 @@ services:
             - rabbitmq_data:/var/lib/rabbitmq
         restart: unless-stopped
 
+    redis:
+        image: redis:6-alpine
+        ports:
+            - "6379:6379"
+        restart: unless-stopped
+
     fastapi-app:
         build: .
         ports:
@@ -24,10 +30,12 @@ services:
             - PYTHONPATH=/app
             - PYTHONUNBUFFERED=1
             - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672//
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
         restart: unless-stopped
         command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
         depends_on:
             - rabbitmq
+            - redis
 
     celery-worker:
         build: .
@@ -38,10 +46,12 @@ services:
             - PYTHONPATH=/app
             - PYTHONUNBUFFERED=1
             - RABBITMQ_URL=amqp://admin:password@rabbitmq:5672//
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
         restart: unless-stopped
         command: celery -A services.queue_service worker --loglevel=info
         depends_on:
             - rabbitmq
+            - redis
 
 volumes:
     rabbitmq_data:

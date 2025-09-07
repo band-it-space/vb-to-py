@@ -20,7 +20,7 @@ def is_date_today(date_str: str) -> bool:
         file_date = datetime.strptime(date_str, "%d/%m/%Y")
         today = datetime.now()
         
-        return True #! REMOVE
+        return file_date.date() == today.date()
     except ValueError:
         return False
 
@@ -66,12 +66,13 @@ async def get_stocks_codes() -> Dict[str,str | List[str]]:
             if extracted_date:
                 logger.info(f"Extracted date: {extracted_date}")
                 
-                if is_date_today(extracted_date):
-                    dt = datetime.strptime(extracted_date, "%d/%m/%Y")
-                    file_date = dt.strftime("%Y-%m-%d")
-                else:
-                    logger.warning(f"File date {extracted_date} is not current")
-                    return {'date': '', 'codes': []}
+                # Temporarily disable date check for testing
+                # if is_date_today(extracted_date):
+                dt = datetime.strptime(extracted_date, "%d/%m/%Y")
+                file_date = dt.strftime("%Y-%m-%d")
+                # else:
+                #     logger.warning(f"File date {extracted_date} is not current")
+                #     return {'date': '', 'codes': []}
             else:
                 logger.warning("Could not extract date from text")
                 return {'date': '', 'codes': []}

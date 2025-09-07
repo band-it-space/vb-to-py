@@ -55,7 +55,7 @@ class TaskRequest(BaseModel):
     trade_day: str
 
 
-class TaskResponse(BaseModel):
+class TaskQueueResponse(BaseModel):
     message: Optional[str] = None
 
 
@@ -65,13 +65,20 @@ class TaskStatusResponse(BaseModel):
     result: Optional[Dict[str, Any]] = None
     info: Optional[Dict[str, Any]] = None
 
-
+# HK TA
 class HKTaCancelResponse(BaseModel):
     task_id: str
     status: str
     error: Optional[str] = None
+class HKTaCheckResponse(BaseModel):
+    task_id: str
+    status: str
+    message: Optional[str] = None
 
-class CheckHkTaResponse(BaseModel):
+# HK Energy
+class HKEnergyRequest(BaseModel):
+    trade_day: str
+class HKEnergyResponse(BaseModel):
     task_id: str
     status: str
     message: Optional[str] = None
