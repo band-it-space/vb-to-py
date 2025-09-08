@@ -1,7 +1,8 @@
+import asyncio
+from controllers.hk_energy.hk_energy import call_get_symbol_adjusted_data
 import pandas as pd
-import requests
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from config.logger import setup_logger
 from config.settings import settings
 from services.db_service import Database_Service
@@ -10,15 +11,22 @@ from services.db_service import Database_Service
 algo_logger = setup_logger("ta_algo")
 logger = algo_logger
 
+db_params = {
+    "db": settings.serhio_db,
+    "user": settings.serhio_db_user,
+    "password": settings.serhio_db_pass,
+    "host": settings.serhio_db_host,
+    "port": settings.serhio_db_port,
+}
 
-db_service = Database_Service()
+db_service = Database_Service(db_params, pool_size=10)
 
 class HK_TA_Algo:
     def __init__(self):
         self.is_running = False
 
 
-    async def start(self, stockname: str, tradeDay: str) -> Dict[str, Any]:
+    async def start(self, stockname: str, tradeDay: str, data_2800: Optional[List[Dict]] = None) -> Dict[str, Any]:
         try:
             logger.info(f"Start algo for: {stockname} at day: {tradeDay}")
             
@@ -45,8 +53,33 @@ class HK_TA_Algo:
             query = f"""
             CALL get_symbol_adjusted_data('{stockname}');
             """
-            rows = await db_service.execute_query(query)
+            
+            # Add retry mechanism for database queries
+            max_retries = 3
+            rows = None
+            
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Executing query for {stockname} (attempt {attempt + 1}/{max_retries})")
+                    rows = await db_service.execute_query(query)
+                    
+                    if rows:
+                        logger.info(f"Query successful for {stockname}: {len(rows)} rows returned")
+                        break
+                    else:
+                        logger.warning(f"Query returned empty result for {stockname} (attempt {attempt + 1})")
+                        
+                except Exception as e:
+                    logger.error(f"Database query failed for {stockname} (attempt {attempt + 1}): {str(e)}")
+                    if attempt == max_retries - 1:
+                        raise
+                
+                # Short delay before retry
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(1)
+            
             if not rows:
+                logger.error(f"No data found for {stockname} after {max_retries} attempts")
                 return {
                     "status": "error",
                     "message": f"There is no data for {stockname} in database",
@@ -88,7 +121,7 @@ class HK_TA_Algo:
                     df['high_250d'] = df['high'].rolling(window=250, min_periods=1).max()
 
                     # Price relative to 2800/HSI screening options, 1W/1M/3M/6M/1Y
-                    pr_2800 = await calculate_pr(df, tradeDay)
+                    pr_2800 = await calculate_pr(df, tradeDay, data_2800)
 
                     # RSI 14D
                     df['low_250d'] = df['low'].rolling(window=250, min_periods=1).min()
@@ -137,119 +170,6 @@ class HK_TA_Algo:
             self.is_running = False
     
 
-# async def fetch_hkex_api_data(stock_code: str, tradeDay: str) -> Any:
-#     try:
-#         api_url = f"http://ete.stockfisher.com.hk/v1.1/debugHKEX/verifyData"
-#         clean_code = str(stock_code).replace(".HK", "")
-#         logger.info(f"stockname: {clean_code}")
-#         params = {
-#             "verifyType": "price",
-#             "Code": int(clean_code)
-#         }
-        
-#         headers = {
-#             'x-api-key': settings.api_key
-#         }
-
-#         response = requests.get(api_url, params=params, headers=headers, timeout=30)
-#         response.raise_for_status()
-        
-#         api_data = response.json()
-        
-#         if not api_data or not isinstance(api_data, list):
-#             logger.warning(f"KL API return empty data for {stock_code}")
-#             return {
-#                 "status": "error",
-#                 "message": f"There is no data for {stock_code} at day: {tradeDay}",
-#                 "data": {}
-#             }
-#         trade_day_date = datetime.strptime(tradeDay, '%Y-%m-%d').date()
-        
-#         processed_data = []
-#         for item in api_data:
-#             try:
-                
-#                 trade_date = datetime.fromisoformat(item["TradeDay"].replace("Z", "+00:00")).date()
-                
-#                 if (item["high"] is not None 
-#                 and item["low"] is not None 
-#                 and item["close"] is not None 
-#                 and trade_date <= trade_day_date
-#                 ):
-                    
-#                     processed_data.append({
-#                         "symbol": f"{clean_code}.HK",
-#                         "high": float(item["high"]),
-#                         "low": float(item["low"]),
-#                         "close": float(item["close"]),
-#                         "date": trade_date
-#                     })
-#             except (ValueError, KeyError, TypeError) as e:
-#                 logger.warning(f"KL API error: {e}")
-#                 continue
-        
-#         if not processed_data:
-#             logger.warning(f"There is no data for {stock_code} at day: {tradeDay}")
-#             return 'No data in API'
-        
-#         df = pd.DataFrame(processed_data)
-#         df['date'] = pd.to_datetime(df['date'])
-#         df = df.sort_values('date')
-#         df['high_20d'] = df['high'].rolling(window=20, min_periods=1).max()
-#         df['low_20d'] = df['low'].rolling(window=20, min_periods=1).min()
-#         df['high_50d'] = df['high'].rolling(window=50, min_periods=1).max()
-#         df['low_50d'] = df['low'].rolling(window=50, min_periods=1).min()
-#         df['high_250d'] = df['high'].rolling(window=250, min_periods=1).max()
-#         df['low_250d'] = df['low'].rolling(window=250, min_periods=1).min()
-
-#         # Price relative to 2800/HSI screening options, 1W/1M/3M/6M/1Y
-#         pr_2800 = await calculate_pr(df, tradeDay)
-#         # RSI 14D
-#         df["RSI_14"] = rsi_multicharts(df["close"], 14)
-
-#         latest_indicators = {
-#             'high_20d': float(df['high_20d'].iloc[-1]) if len(df) > 0 else None,
-#             'low_20d': float(df['low_20d'].iloc[-1]) if len(df) > 0 else None,
-#             'high_50d': float(df['high_50d'].iloc[-1]) if len(df) > 0 else None,
-#             'low_50d': float(df['low_50d'].iloc[-1]) if len(df) > 0 else None,
-#             'high_250d': float(df['high_250d'].iloc[-1]) if len(df) > 0 else None,
-#             'low_250d': float(df['low_250d'].iloc[-1]) if len(df) > 0 else None,
-#             "pr5": pr_2800["PR_5d"],
-#             "pr20": pr_2800["PR_20d"],
-#             "pr60": pr_2800["PR_60d"],
-#             "pr125": pr_2800["PR_125d"],
-#             "pr250": pr_2800['PR_250d'],
-#             'rsi14': round(float(df['RSI_14'].iloc[-1]), 3) if len(df) > 0 and not pd.isna(df['RSI_14'].iloc[-1]) else None,
-#             'used_days_for_calculation': len(df),
-#             'date_range': {
-#                 'from': df['date'].min().strftime('%Y-%m-%d') if len(df) > 0 else None,
-#                 'to': df['date'].max().strftime('%Y-%m-%d') if len(df) > 0 else None
-#             }
-#         }
-        
-        
-#         logger.info(f"API дані оброблено для {clean_code}.HK: {latest_indicators}")
-        
-#         return latest_indicators
-        
-#     except requests.RequestException as e:
-#         logger.error(f"Помилка HTTP запиту для {stock_code}: {str(e)}")
-#         return {
-#             "status": "error",
-#             "message": f"Помилка з'єднання з API: {str(e)}",
-#             "stock_code": stock_code,
-#             "data": {}
-#         }
-#     except Exception as e:
-#         logger.error(f"Загальна помилка обробки API даних для {stock_code}: {str(e)}")
-#         return {
-#             "status": "error",
-#             "message": f"Помилка обробки даних: {str(e)}",
-#             "stock_code": stock_code,
-#             "data": {}
-#         }
-
-
 def rsi_multicharts(close: pd.Series, period: int = 14) -> pd.Series:
 
     delta = close.diff()
@@ -283,57 +203,24 @@ def rsi_multicharts(close: pd.Series, period: int = 14) -> pd.Series:
 
     return rsi
 
-async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, periods=(5, 20, 60, 125, 250)) -> Any:
+async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, data_2800: List[Dict], periods=(5, 20, 60, 125, 250)) -> Any:
     try:
-        api_url = f"http://ete.stockfisher.com.hk/v1.1/debugHKEX/verifyData"
-        params = {
-            "verifyType": "price",
-            "Code": "2800"
-        }
-        
-        headers = {
-            'x-api-key': settings.api_key
-        }
+        if data_2800 is None or not data_2800:
+            trade_day_date = datetime.strptime(tradeDay, '%Y-%m-%d').date()
+            rows_2800 = await call_get_symbol_adjusted_data('2800')
+            if not rows_2800:
+                raise Exception(f"There is no data for 2800")
 
-        response = requests.get(api_url, params=params, headers=headers)
-        response.raise_for_status()
-        
-        api_data = response.json()
-        
-        if not api_data or not isinstance(api_data, list):
-            logger.warning(f"KL API return empty data for 2800")
-            return {
-                "status": "error",
-                "message": f"There is no data for 2800",
-                "data": {}
-            }
-        trade_day_date = datetime.strptime(tradeDay, '%Y-%m-%d').date()
-        logger.info(f"KL API 2800 data: {trade_day_date}")
-        logger.info(f"API response: {len(api_data)}")
-        
-        data_2800 = []
-        for item in api_data:
-            try:
-                
-                trade_date = datetime.fromisoformat(item["TradeDay"].replace("Z", "+00:00")).date()
-                
-                if ( item["close"] is not None
-                and trade_date <= trade_day_date
-                ):
-                    
+            data_2800 = []
+            for row in rows_2800:
+                trade_date = row[2]
+                close_price = row[12]
+                if close_price is not None and trade_date <= trade_day_date:
                     data_2800.append({
-                        "close": float(item["close"]),
+                        "close": float(close_price),
                         "date": trade_date
                     })
-            except (ValueError, KeyError, TypeError) as e:
-                logger.warning(f"KL API error: {e}")
-                continue
-        
-        if not data_2800:
-            logger.warning(f"There is no data for 2800")
-            return 'No data in API'
-        
-        
+
         df_bench = pd.DataFrame(data_2800)
         s = df_stock[["date", "close"]].rename(columns={"close": "close_s"})
         b = df_bench[["date", "close"]].rename(columns={"close": "close_b"})
@@ -371,17 +258,11 @@ async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, periods=(5, 20, 60
             "PR_250d": round(PR_250d, 3) if PR_250d is not None else None,
         }
 
-    except requests.RequestException as e:
-        logger.error(f"Помилка HTTP запиту для 2800: {str(e)}")
-        return {
-            "message": f"Помилка HTTP запиту для 2800: {str(e)}",
-            "data": {}
-        }
+    
     except Exception as e:
-        logger.error(f"Загальна помилка обробки API даних для 2800: {str(e)}")
+        logger.error(f"PR calculation error: {str(e)}")
         return {
-            "message": f"Помилка обробки даних: {str(e)}",
-            "data": {}
+            "message": str(e)
         }
 
 
