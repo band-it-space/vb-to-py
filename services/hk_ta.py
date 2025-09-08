@@ -2,7 +2,7 @@ import asyncio
 from controllers.hk_energy.hk_energy import call_get_symbol_adjusted_data
 import pandas as pd
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 from config.logger import setup_logger
 from config.settings import settings
 from services.db_service import Database_Service
@@ -26,7 +26,7 @@ class HK_TA_Algo:
         self.is_running = False
 
 
-    async def start(self, stockname: str, tradeDay: str) -> Dict[str, Any]:
+    async def start(self, stockname: str, tradeDay: str, data_2800: Optional[List[Dict]] = None) -> Dict[str, Any]:
         try:
             logger.info(f"Start algo for: {stockname} at day: {tradeDay}")
             
@@ -121,7 +121,7 @@ class HK_TA_Algo:
                     df['high_250d'] = df['high'].rolling(window=250, min_periods=1).max()
 
                     # Price relative to 2800/HSI screening options, 1W/1M/3M/6M/1Y
-                    pr_2800 = await calculate_pr(df, tradeDay)
+                    pr_2800 = await calculate_pr(df, tradeDay, data_2800)
 
                     # RSI 14D
                     df['low_250d'] = df['low'].rolling(window=250, min_periods=1).min()
@@ -203,22 +203,23 @@ def rsi_multicharts(close: pd.Series, period: int = 14) -> pd.Series:
 
     return rsi
 
-async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, periods=(5, 20, 60, 125, 250)) -> Any:
+async def calculate_pr(df_stock: pd.DataFrame, tradeDay: str, data_2800: List[Dict], periods=(5, 20, 60, 125, 250)) -> Any:
     try:
-        trade_day_date = datetime.strptime(tradeDay, '%Y-%m-%d').date()
-        rows_2800 = await call_get_symbol_adjusted_data('2800')
-        if not rows_2800:
-            raise Exception(f"There is no data for 2800")
+        if data_2800 is None or not data_2800:
+            trade_day_date = datetime.strptime(tradeDay, '%Y-%m-%d').date()
+            rows_2800 = await call_get_symbol_adjusted_data('2800')
+            if not rows_2800:
+                raise Exception(f"There is no data for 2800")
 
-        data_2800 = []
-        for row in rows_2800:
-            trade_date = row[2]
-            close_price = row[12]
-            if close_price is not None and trade_date <= trade_day_date:
-                data_2800.append({
-                    "close": float(close_price),
-                    "date": trade_date
-                })
+            data_2800 = []
+            for row in rows_2800:
+                trade_date = row[2]
+                close_price = row[12]
+                if close_price is not None and trade_date <= trade_day_date:
+                    data_2800.append({
+                        "close": float(close_price),
+                        "date": trade_date
+                    })
 
         df_bench = pd.DataFrame(data_2800)
         s = df_stock[["date", "close"]].rename(columns={"close": "close_s"})

@@ -12,12 +12,11 @@ from controllers.files_controller import download_csv_files
 
 from models.schemas import (
     AlgoRequest, AlgoResponse,  EnergyAlgoResponse, 
-    EnergyAlgoRequestTest,  CodeesResponse, HKEnergyResponse, HKTaCancelResponse, TaskQueueResponse, HKEnergyRequest,
+    EnergyAlgoRequestTest,  CodeesResponse, HKEnergyResponse, HKTaCancelResponse, HKEnergyRequest,
     HKTaCheckResponse
 )
 
 from services.hk_ta import HK_TA
-from services.queue_service import process_hk_ta_task, clear_hk_ta_token
 from config.logger import setup_logger
 
 
@@ -170,28 +169,6 @@ async def check_hk_ta():
             detail=f"Error starting HK TA check: {str(e)}"
         )
 
-@router.get("/hk-ta/queue", response_model=TaskQueueResponse)
-async def queue_hk_ta():
-    """Queue HK TA analysis task"""
-    try:
-        response_data = await get_stocks_codes()
-
-        # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]]
-        tasks = [process_hk_ta_task.s(code, "2025-09-03") for code in response_data["codes"]]  #! REMOVE
-
-        # chord(tasks)(clear_hk_ta_token.s(response_data["date"]))
-        chord(tasks)(clear_hk_ta_token.s("2025-09-03")) #! REMOVE
-
-        return TaskQueueResponse(
-            message=f"HK TA analysis started for {response_data['date']}. Total codes: {len(response_data['codes'])}."
-        )
-        
-    except Exception as e:
-        logger.error(f"Error queueing HK TA task: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error queueing task: {str(e)}"
-        )
 
 @router.delete("/hk-ta/queue/cancel/{task_id}", response_model=HKTaCancelResponse)
 async def cancel_task_endpoint(task_id: str):

@@ -5,6 +5,7 @@ from celery import Celery, chord
 import os
 import asyncio
 import requests
+from datetime import datetime
 
 from controllers.get_stocks_codes import get_stocks_codes
 from controllers.hk_energy.hk_energy import call_get_symbol_adjusted_data, prepare_stock_data
@@ -219,7 +220,7 @@ def clear_hk_energy_token(results):
 
 #HK TA
 @celery_app.task(bind=True, name='process_hk_ta')
-def process_hk_ta_task(self, stock_code: str, trade_day: str):
+def process_hk_ta_task(self, stock_code: str, trade_day: str, data_2800: List[Dict]):
     """
     Celery task to process HK TA analysis
     """
@@ -232,7 +233,7 @@ def process_hk_ta_task(self, stock_code: str, trade_day: str):
         
         try:
             result =  loop.run_until_complete(
-                    HK_TA.start(stock_code, trade_day)
+                    HK_TA.start(stock_code, trade_day, data_2800)
             )
             logger.info(f"Completed HK TA analysis for {stock_code}")
             if result["status"] == "error":
@@ -283,7 +284,7 @@ def queue_check_hk_ta(self):
     Celery task to check HK TA database status with retry mechanism
     Waits 1 minute between attempts if no data found
     """
-    
+    loop = None
     try:
         
         logger.info(f"Checking HK TA database status working!")
@@ -298,31 +299,47 @@ def queue_check_hk_ta(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        try:
-            results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
-        finally:
-            loop.close()
+        results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
+
         results = [[1,]] #! REMOVE
         if results:
             if results[0][0] > 0: 
                 logger.info(f"Data found and processed, {results[0][0]}")
-
                 
-                endpoint_url = f"{BASE_URL}/api/hk-ta/queue"
+                # Get codes
+                response_data = loop.run_until_complete(get_stocks_codes())
+                if not response_data.get("date") or not response_data.get("codes"):
+                    logger.warning("No data found in get_stocks_codes")
+                    raise Exception("No data found in get_stocks_codes")
+                
+                
+                trade_day_date = response_data["date"]
+                # trade_day_date = "2025-09-04"
 
-                response = requests.get(endpoint_url, timeout=30)
-                logger.info(f"Response: {response.json()}")
-                if response.status_code == 200:
-                    response_message = response.json()["message"]
-                else:
-                    response_message = "Error in queue/hk-ta"
+                # Get data for 2800
+                rows_2800 = loop.run_until_complete(call_get_symbol_adjusted_data('2800'))
+                if not rows_2800:
+                    raise Exception(f"There is no data for 2800")
 
-                return {
-                    "status": "success",
-                    "message": response_message,
-                    "data": results[0][0],
-                    "attempts": getattr(self.request, 'retries', 0) + 1
-                }
+                data_2800 = []
+                for row in rows_2800:
+                    trade_date = row[2]
+                    close_price = row[12]
+                    if close_price is not None and trade_date <= datetime.strptime(trade_day_date, '%Y-%m-%d').date():
+                        data_2800.append({
+                            "close": float(close_price),
+                            "date": trade_date
+                        })
+
+
+
+                # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]]
+                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]  #! REMOVE
+
+                # chord(tasks)(clear_hk_ta_token.s(response_data["date"]))
+                chord(tasks)(clear_hk_ta_token.s(trade_day_date)) #! REMOVE
+
+
             else:
                 # No data found - retry after 1 minute
                 attempt = getattr(self.request, 'retries', 0) + 1
@@ -331,12 +348,8 @@ def queue_check_hk_ta(self):
                 if attempt >= MAX_ATTEMPTS:
                     logger.warning(f"HK TA check timeout after {MAX_ATTEMPTS} attempts")
 
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        results = loop.run_until_complete(file_service.clear_file_content(settings.hk_ta_token_file_name))
-                    finally:
-                        loop.close()
+                    results = loop.run_until_complete(file_service.clear_file_content(settings.hk_ta_token_file_name))
+                    
                     return {
                         "status": "timeout",
                         "message": f"No data found after {MAX_ATTEMPTS} attempts",
@@ -346,7 +359,7 @@ def queue_check_hk_ta(self):
                 logger.info(f"No data found, retrying in 1 minute (attempt {attempt}/{MAX_ATTEMPTS})")
                 raise self.retry(countdown=60, max_retries=MAX_ATTEMPTS)
 
-
+    
     except Exception as exc:
         # Check if it's a Celery retry exception
         if 'Retry' in str(exc):
@@ -359,6 +372,9 @@ def queue_check_hk_ta(self):
                 meta={'error': str(exc)}
             )
             raise exc
+    finally: 
+        if loop:
+            loop.close()
 
 @celery_app.task
 def clear_hk_ta_token(results, date: str):

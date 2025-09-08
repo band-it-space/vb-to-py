@@ -28,7 +28,7 @@ def main():
         celery_app.worker_main([
             'worker',
             '--loglevel=info',
-            '--concurrency=2',  # Number of concurrent worker processes
+            '--concurrency=4',  # Number of concurrent worker processes
             '--max-tasks-per-child=1000',  # Restart worker after processing N tasks
         ])
     except KeyboardInterrupt:
