@@ -9,6 +9,10 @@ requests
 python-dateutil
 openpyxl
 
+aiohttp
+mysql-connector-python
+python-dotenv
+
 aiomysql==0.2.0
 
 # RabbitMQ and Queue dependencies

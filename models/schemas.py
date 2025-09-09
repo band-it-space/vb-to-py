@@ -82,3 +82,17 @@ class HKEnergyResponse(BaseModel):
     task_id: str
     status: str
     message: Optional[str] = None
+
+# HK Signal
+class HKSignalRequest(BaseModel):
+    code: str
+    trade_date: str
+
+class HKSignalResponse(BaseModel):
+    code: str
+    tradeday: str
+    position_status: Optional[str] = None
+    next_open_action: Optional[str] = None
+    exit1: Optional[float] = None
+    entry_price: Optional[float] = None
+    close: Optional[float] = None

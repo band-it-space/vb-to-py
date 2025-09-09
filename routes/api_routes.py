@@ -13,10 +13,11 @@ from controllers.files_controller import download_csv_files
 from models.schemas import (
     AlgoRequest, AlgoResponse,  EnergyAlgoResponse, 
     EnergyAlgoRequestTest,  CodeesResponse, HKEnergyResponse, HKTaCancelResponse, HKEnergyRequest,
-    HKTaCheckResponse
+    HKTaCheckResponse, HKSignalRequest, HKSignalResponse
 )
 
 from services.hk_ta import HK_TA
+from services.hk_signal.main import main as hk_signal_main
 from config.logger import setup_logger
 
 
@@ -181,6 +182,42 @@ async def cancel_task_endpoint(task_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Error cancelling task: {str(e)}"
+        )
+
+
+@router.post("/hk-signal", response_model=HKSignalResponse)
+async def hk_signal(request: HKSignalRequest):
+    """
+    HK Signal endpoint that processes stock signal analysis
+    """
+    try:
+        logger.info(f"Starting HK Signal for code: {request.code}, date: {request.trade_date}")
+        
+        if not request.code or len(request.code.strip()) == 0 or not request.trade_date or len(request.trade_date.strip()) == 0:
+            logger.warning("Missing or invalid required fields!")
+            raise HTTPException(
+                status_code=400, 
+                detail="Missing or invalid required fields!"
+            )
+
+        result = await hk_signal_main(request.code.strip(), request.trade_date.strip())
+        
+        if result is None:
+            logger.warning("No result returned from HK Signal analysis")
+            raise HTTPException(
+                status_code=404,
+                detail="No signal data available for the given parameters"
+            )
+        
+        return HKSignalResponse(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in HK Signal for {request.code}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Server error: {str(e)}"
         )
 
 
