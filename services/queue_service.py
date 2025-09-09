@@ -313,7 +313,7 @@ def queue_check_hk_ta(self):
                     raise Exception("No data found in get_stocks_codes")
                 
                 
-                trade_day_date = response_data["date"]
+                trade_day_date = str(response_data["date"])
                 # trade_day_date = "2025-09-04"
 
                 # Get data for 2800
@@ -333,11 +333,11 @@ def queue_check_hk_ta(self):
 
 
 
-                # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]]
-                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]  #! REMOVE
+                # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]] #! REMOVE
+                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]  
 
-                # chord(tasks)(clear_hk_ta_token.s(response_data["date"]))
-                chord(tasks)(clear_hk_ta_token.s(trade_day_date)) #! REMOVE
+                # chord(tasks)(clear_hk_ta_token.s(response_data["date"])) #! REMOVE
+                chord(tasks)(clear_hk_ta_token.s(trade_day_date)) 
 
 
             else:
