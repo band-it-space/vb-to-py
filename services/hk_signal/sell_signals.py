@@ -1,4 +1,5 @@
 from datetime import datetime
+from services.hk_signal.get_code_energy import calculate_energy_indicators
 
 
 def is_finite(value):
@@ -274,6 +275,9 @@ def s8(ohlcv, buy_date, buy_price):
     
     return count_bear_huge >= 3
 
+def s9(trade_date, ohlcv, spy_data):
+    energy_level = calculate_energy_indicators(trade_date, ohlcv, spy_data)
+    return energy_level["energy_score"] < 0.22
 
 def s10(ohlcv, buy_date, buy_price):
     data = sorted(ohlcv, key=lambda x: to_ts(x.date))
@@ -575,7 +579,7 @@ def s17(ohlcv, buy_date, buy_price):
     return near_bottom
 
 
-def runAllSellConditions(ohlcv, spy_data, buy_date, buy_price, stop_loss):
+def runAllSellConditions(ohlcv, spy_data, buy_date, buy_price, stop_loss, trade_date):
     return {
         'S1': exit_by_stop_loss(ohlcv, stop_loss),
         'S4': s4(ohlcv, buy_date, buy_price),
@@ -583,6 +587,7 @@ def runAllSellConditions(ohlcv, spy_data, buy_date, buy_price, stop_loss):
         'S6': s6(ohlcv, buy_date, buy_price),
         'S7': s7(ohlcv, buy_date, buy_price),
         'S8': s8(ohlcv, buy_date, buy_price),
+        'S9': s9(trade_date, ohlcv, spy_data),
         'S10': s10(ohlcv, buy_date, buy_price),
         'S11': s11(ohlcv, buy_date, buy_price),
         'S12': s12(ohlcv, buy_date, buy_price),
@@ -596,7 +601,7 @@ def runAllSellConditions(ohlcv, spy_data, buy_date, buy_price, stop_loss):
 
 def isSell(signals):
     return ((signals['S1'] or signals['S4'] or signals['S5'] or 
-             signals['S6'] or signals['S7'] or signals['S8'] or 
+             signals['S6'] or signals['S7'] or signals['S8'] or signals['S9'] or
              signals['S10'] or signals['S11'] or signals['S12'] or 
              signals['S13'] or signals['S14'] or signals['S15'] or 
              signals['S16'] or signals['S17']))

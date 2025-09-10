@@ -3,6 +3,7 @@ import aiohttp
 from services.hk_signal.get_db_data import get_stock_data_from_db
 from services.hk_signal.sell_signals import runAllSellConditions, isSell
 from services.hk_signal.buy_signals import runAllBuyConditions, isBuy, OHLCV
+from services.hk_signal.get_code_energy import calculate_energy_indicators
 
 
 async def main(code, trade_date):
@@ -12,6 +13,8 @@ async def main(code, trade_date):
 
     spy_data = [OHLCV(bar["date"], bar["open"], bar["high"], bar["low"], bar["close"], bar["volume"]) for bar in spy_data_raw]
     code_data = [OHLCV(bar["date"], bar["open"], bar["high"], bar["low"], bar["close"], bar["volume"]) for bar in code_data_raw]
+    
+    energy_data = calculate_energy_indicators(trade_date, code_data, spy_data)
     
     if code_data_raw and len(code_data_raw) > 1:
         last_date = code_data_raw[-1]["date"]
@@ -43,6 +46,11 @@ async def main(code, trade_date):
                                     "tradeday": trade_date,
                                     "position_status": position_status,
                                     "next_open_action": "B" if buy else "N",
+                                    "E1": energy_data["E1"],
+                                    "E2": energy_data["E2"],
+                                    "E3": energy_data["E3"],
+                                    "E4": energy_data["E4"],
+                                    "E5": energy_data["E5"],
                                     "exit1": buySignals.get('stopLoss'),
                                     "entry_price": 0,
                                     "close": code_data[-1].close if code_data else None
@@ -55,7 +63,7 @@ async def main(code, trade_date):
                                 entry_price = data.get('entry_price')
                                 exit1 = data.get('exit1')
 
-                                sellSignals = runAllSellConditions(code_data, spy_data, entry_date, entry_price, exit1)
+                                sellSignals = runAllSellConditions(code_data, spy_data, entry_date, entry_price, exit1, trade_date)
                                 print(sellSignals)
                                 sell = isSell(sellSignals)
                                 # print(sell)
@@ -65,6 +73,11 @@ async def main(code, trade_date):
                                     "tradeday": trade_date,
                                     "position_status": position_status,
                                     "next_open_action": "S" if sell else "N",
+                                    "E1": energy_data["E1"],
+                                    "E2": energy_data["E2"],
+                                    "E3": energy_data["E3"],
+                                    "E4": energy_data["E4"],
+                                    "E5": energy_data["E5"],
                                     "exit1": data.get('exit1'),
                                     "entry_price": data.get('entry_price'),
                                     "close": code_data[-1].close if code_data else None

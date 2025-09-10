@@ -93,6 +93,11 @@ class HKSignalResponse(BaseModel):
     tradeday: str
     position_status: Optional[str] = None
     next_open_action: Optional[str] = None
+    E1: Optional[float] = None
+    E2: Optional[float] = None
+    E3: Optional[float] = None
+    E4: Optional[float] = None
+    E5: Optional[float] = None
     exit1: Optional[float] = None
     entry_price: Optional[float] = None
     close: Optional[float] = None
