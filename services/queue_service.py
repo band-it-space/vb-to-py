@@ -17,7 +17,6 @@ from config.settings import settings
 from config.logger import setup_logger
 from services.file_services import FileService
 
-
 file_service = FileService()
 # Setup logger
 queue_logger = setup_logger("queue_service")
@@ -47,8 +46,8 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
 )
-
-MAX_ATTEMPTS = 720
+#720
+MAX_ATTEMPTS = 2
 
 # DB agents
 kl_db_params = {
@@ -102,7 +101,7 @@ def prepare_hk_energy_task(self, trade_day: str):
 
             # Send tasks to process HK Energy
             stock_data_2800_dict = [record.dict() for record in prepared_2800_data]
-            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])] #! REMOVE
+            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])[:10]] #! REMOVE
 
             chord(tasks)(clear_hk_energy_token.s())
         finally:
@@ -278,33 +277,38 @@ def process_hk_ta_task(self, stock_code: str, trade_day: str, data_2800: List[Di
         )
         raise exc
 
-@celery_app.task(bind=True, name='check_hk_ta')
-def queue_check_hk_ta(self):
+@celery_app.task(bind=True, name='prepare_hk_ta')
+def prepare_hk_ta(self):
     """
     Celery task to check HK TA database status with retry mechanism
     Waits 1 minute between attempts if no data found
     """
     loop = None
-    try:
-        
-        logger.info(f"Checking HK TA database status working!")
+    from services.task_scheduler import TaskScheduler
 
-        # Check database for data (placeholder implementation)
-        sql_query = """
-                SELECT COUNT(0) FROM signal_hkex_01_interface_log a
-                WHERE a.tradeday > (SELECT MAX(tradeday) FROM signal_hkex_ta1 b)
-                AND a.end_date IS NOT NULL;
+    scheduler = TaskScheduler()
+    try:
+        logger.info(f"Checking HK TA database status working!")
+        
+        init_sql_query = """
+                CALL get_todays_finished_events("set_adjusted_prices");
                 """
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
+        # Cancel existing retry task
+        loop.run_until_complete(scheduler.cancel_existing_retry_task())
 
-        results = [[1,]] #! REMOVE
-        if results:
-            if results[0][0] > 0: 
-                logger.info(f"Data found and processed, {results[0][0]}")
+        finished_events = loop.run_until_complete(db_service.execute_query(init_sql_query))
+        logger.info(f"Finished events: {finished_events}")
+
+
+        # results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
+
+        #results = [[1,]] #! REMOVE
+        if finished_events:
+                logger.info(f"Data found and processed, {finished_events[0][0]}")
                 
                 # Get codes
                 response_data = loop.run_until_complete(get_stocks_codes())
@@ -334,13 +338,11 @@ def queue_check_hk_ta(self):
 
 
                 # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]] #! REMOVE
-                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]  
+                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"][:10]]  
 
                 # chord(tasks)(clear_hk_ta_token.s(response_data["date"])) #! REMOVE
                 chord(tasks)(clear_hk_ta_token.s(trade_day_date)) 
-
-
-            else:
+        else:
                 # No data found - retry after 1 minute
                 attempt = getattr(self.request, 'retries', 0) + 1
                 
@@ -348,7 +350,13 @@ def queue_check_hk_ta(self):
                 if attempt >= MAX_ATTEMPTS:
                     logger.warning(f"HK TA check timeout after {MAX_ATTEMPTS} attempts")
 
+                    # Set retry task after 14 hours
+                    loop.run_until_complete(scheduler.schedule_retry_task(delay_hours=settings.daily_retry))
+
+                    # Clear hk_ta_token
                     results = loop.run_until_complete(file_service.clear_file_content(settings.hk_ta_token_file_name))
+
+
                     
                     return {
                         "status": "timeout",
@@ -379,11 +387,17 @@ def queue_check_hk_ta(self):
 @celery_app.task
 def clear_hk_ta_token(results, date: str):
     logger.info("All HK TA tasks completed, clearing hk_ta_token")
+    from services.task_scheduler import TaskScheduler
+
+    scheduler = TaskScheduler()
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
         try:
+            # Set retry task after 14 hours
+            loop.run_until_complete(scheduler.schedule_retry_task(delay_hours=settings.daily_retry))
+
             # Clear hk_ta_token
             loop.run_until_complete(
                 file_service.clear_file_content(settings.hk_ta_token_file_name)
@@ -419,7 +433,21 @@ def clear_hk_ta_token(results, date: str):
         logger.error(f"Error clearing hk_ta_token: {str(exc)}")
         return {"status": "error", "message": str(exc)}
 
+# scheduler task 
+@celery_app.task(name='retry_hk_ta')
+def retry_hk_ta_task():
+    try:
+        from controllers.hk_ta.hk_ta_init_task import hk_ta_initialise
 
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(hk_ta_initialise())
+    except Exception as exc:
+        logger.error(f"Error in retry_hk_ta_task: {str(exc)}")
+        return {"status": "error", "message": str(exc)}
+    finally:
+        if loop:
+            loop.close()
 
 def cancel_task(task_id: str):
     """Cancel a task by task ID"""  

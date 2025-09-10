@@ -37,7 +37,7 @@ class HK_TA_Algo:
                 logger.info("Trade day is in the future. Exiting.")
                 return {
                     "status": "error",
-                    "message": "Trade day is in the future. Exiting.",
+                    "message": f"Trade day ({tradeDay}) is in the future (today - {today}).",
                 }
 
             if self.is_running:
@@ -60,11 +60,11 @@ class HK_TA_Algo:
             
             for attempt in range(max_retries):
                 try:
-                    logger.info(f"Executing query for {stockname} (attempt {attempt + 1}/{max_retries})")
+                    db_service.close_all_connections() 
                     rows = await db_service.execute_query(query)
                     
                     if rows:
-                        logger.info(f"Query successful for {stockname}: {len(rows)} rows returned")
+                        logger.info(f"Query successful for {stockname} at day {tradeDay}: {len(rows)} rows returned")
                         break
                     else:
                         logger.warning(f"Query returned empty result for {stockname} (attempt {attempt + 1})")
@@ -89,7 +89,7 @@ class HK_TA_Algo:
             if not any(row[2].strftime('%Y-%m-%d') == tradeDay for row in rows):
                 return {
                     "status": "error",
-                    "message": f"There is no data for {stockname} at day: {tradeDay} in database",
+                    "message": f"There is no data for {stockname} at day: {tradeDay} in database.",
                     "stockname": stockname,
                     "tradeDay": tradeDay
                     }

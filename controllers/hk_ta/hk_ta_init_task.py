@@ -1,6 +1,6 @@
 from config.logger import setup_logger
 from services.file_services import FileService
-from services.queue_service import queue_check_hk_ta
+from services.queue_service import prepare_hk_ta
 from config.settings import settings
 
 route_logger = setup_logger("iniitalise")
@@ -17,7 +17,7 @@ async def hk_ta_initialise():
     else:
         await file_service.clear_file_content('signals_hkex_ta1')
         await file_service.clear_file_content('signals_hkex_ta2')
-        task = queue_check_hk_ta.delay()
+        task = prepare_hk_ta.delay()
         logger.info(f"HK TA check started, task_id: {task.id}")
         file_service.add_data_to_csv(settings.hk_ta_token_file_name, [{"task_id": task.id}], ["task_id"])
         return {"task_id": task.id, "status": "QUEUED", "message": "HK TA check started"}

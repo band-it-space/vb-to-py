@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     test_db_table_ta2: str = "test_db_table_ta2"
     test_db_table_energy: str = "test_db_table_energy"
 
+    hk_ta_retry_schedule: str = "hk_ta_retry_schedule"
+
+    # Daily retry task 
+    daily_retry: int = 12 # 12 hours
 
     host: str = "0.0.0.0"
     port: int = 8000

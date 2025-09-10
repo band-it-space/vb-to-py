@@ -2,7 +2,6 @@ import logging
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
 
 def setup_logger(name: str = "fastapi_app", level: str = "INFO") -> logging.Logger:
     logger = logging.getLogger(name)
