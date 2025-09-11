@@ -16,9 +16,9 @@ class TaskScheduler:
         try:
             await self.cancel_existing_retry_task()
             
-            delay_seconds = delay_hours * 3600 # ! REMOVE
+            delay_seconds = delay_hours * 3600
             
-            task = retry_hk_ta_task.apply_async(countdown=500)
+            task = retry_hk_ta_task.apply_async(countdown=delay_seconds)
             
             scheduled_time = datetime.now() + timedelta(hours=delay_hours)
             

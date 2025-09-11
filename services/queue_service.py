@@ -47,7 +47,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 10
 
 # DB agents
 kl_db_params = {
@@ -300,15 +300,15 @@ def prepare_hk_ta(self):
         # Cancel existing retry task
         loop.run_until_complete(scheduler.cancel_existing_retry_task())
 
-        finished_events = loop.run_until_complete(db_service.execute_query(init_sql_query))
-        logger.info(f"Finished events: {finished_events}")
+        prices_update_date = loop.run_until_complete(db_service.execute_query(init_sql_query))
+        logger.info(f"Finished events: {prices_update_date}")
 
 
         # results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
 
         #results = [[1,]] #! REMOVE
-        if finished_events:
-                logger.info(f"Data found and processed, {finished_events[0][0]}")
+        if prices_update_date:
+                logger.info(f"Data found and processed, {prices_update_date[0][0]}")
                 
                 # Get codes
                 response_data = loop.run_until_complete(get_stocks_codes())
@@ -442,6 +442,8 @@ def retry_hk_ta_task():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(hk_ta_initialise())
+        
+        return {"status": "success", "message": "HK TA scheduler initialised"}
     except Exception as exc:
         logger.error(f"Error in retry_hk_ta_task: {str(exc)}")
         return {"status": "error", "message": str(exc)}
