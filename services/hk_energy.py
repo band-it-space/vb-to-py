@@ -43,10 +43,6 @@ class HK_Energy_Algo:
             processed_data = self._process_stock_data(stock_data, load_data_date)
             processed_data_spy = self._process_stock_data(stock_data_2800, load_data_date)
             
-            logger.info(f"Processed data: {processed_data}")
-            logger.info(f"Processed 2800 {processed_data_spy}")
-            
-            
             close = processed_data['close']
             high = processed_data['high']
             low = processed_data['low']

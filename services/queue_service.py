@@ -300,6 +300,9 @@ def prepare_hk_ta(self):
         # Cancel existing retry task
         loop.run_until_complete(scheduler.cancel_existing_retry_task())
 
+        # restart connections for db_service
+        db_service.close_all_connections()
+
         prices_update_date = loop.run_until_complete(db_service.execute_query(init_sql_query))
         logger.info(f"Finished events: {prices_update_date}")
 
@@ -338,7 +341,7 @@ def prepare_hk_ta(self):
 
                 # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]] #! REMOVE
                 tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]
-                
+
                 chord(tasks)(clear_hk_ta_token.s(trade_day_date)) 
         else:
                 # No data found - retry after 1 minute
