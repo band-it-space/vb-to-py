@@ -47,7 +47,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 10
+MAX_ATTEMPTS = 720
 
 # DB agents
 kl_db_params = {
@@ -442,7 +442,7 @@ def retry_hk_ta_task():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(hk_ta_initialise())
-        
+
         return {"status": "success", "message": "HK TA scheduler initialised"}
     except Exception as exc:
         logger.error(f"Error in retry_hk_ta_task: {str(exc)}")

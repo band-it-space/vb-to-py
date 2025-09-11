@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     hk_ta_retry_schedule: str = "hk_ta_retry_schedule"
 
     # Daily retry task 
-    daily_retry: int = 1 # 12 hours
+    daily_retry: int = 16 # 12 hours
 
     host: str = "0.0.0.0"
     port: int = 8000
