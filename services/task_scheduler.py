@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from config.settings import settings
 from services.file_services import FileService
-from services.queue_service import celery_app, prepare_hk_ta
+from services.queue_service import celery_app, retry_hk_ta_task
 from config.logger import setup_logger
 
 logger = setup_logger("task_scheduler")
@@ -55,20 +55,4 @@ class TaskScheduler:
             logger.error(f"Error cancelling retry task: {e}")
             return {"status": "error", "message": str(e)}
 
-# Celery задача для повторного виклику
-@celery_app.task(name='retry_hk_ta')
-def retry_hk_ta_task():
-    """Task that calls prepare_hk_ta after delay"""
-    try:
-        logger.info("Starting retry HK TA task")
-        
-        # Запускаємо prepare_hk_ta напряму
-        task = prepare_hk_ta.delay()
-        
-        logger.info(f"Retry HK TA started, task_id: {task.id}")
-        return {"status": "success", "task_id": task.id}
-        
-    except Exception as e:
-        logger.error(f"Error in retry_hk_ta_task: {e}")
-        raise e
 

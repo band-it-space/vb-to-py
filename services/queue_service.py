@@ -47,7 +47,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 5
+MAX_ATTEMPTS = 10
 
 # DB agents
 db_params_seghio = {
@@ -340,7 +340,7 @@ def prepare_hk_ta(self):
                 if attempt >= MAX_ATTEMPTS:
                     logger.warning(f"HK TA check timeout after {MAX_ATTEMPTS} attempts")
 
-                    # Set retry task after 14 hours
+                    # Set retry task after
                     loop.run_until_complete(scheduler.schedule_retry_task(delay_hours=settings.daily_retry))
 
                     # Clear hk_ta_token
@@ -385,7 +385,7 @@ def clear_hk_ta_token(results, date: str):
         asyncio.set_event_loop(loop)
         
         try:
-            # Set retry task after 14 hours
+            # Set retry task
             loop.run_until_complete(scheduler.schedule_retry_task(delay_hours=settings.daily_retry))
 
             # Clear hk_ta_token
@@ -431,9 +431,12 @@ def retry_hk_ta_task():
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(hk_ta_initialise())
-
-        return {"status": "success", "message": "HK TA scheduler initialised"}
+        result = loop.run_until_complete(
+            asyncio.wait_for(hk_ta_initialise(), timeout=500.0)  
+        )
+        
+        logger.info(f"Retry HK TA completed: {result}")
+        return result
     except Exception as exc:
         logger.error(f"Error in retry_hk_ta_task: {str(exc)}")
         return {"status": "error", "message": str(exc)}
