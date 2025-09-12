@@ -47,18 +47,9 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 720
+MAX_ATTEMPTS = 5
 
 # DB agents
-kl_db_params = {
-    "db": settings.kl_db,
-    "user": settings.kl_db_user,
-    "password": settings.kl_db_pass,
-    "host": settings.kl_db_host,
-    "port": settings.kl_db_port,
-    'charset': 'utf8mb4',
-    'autocommit': True
-}
 db_params_seghio = {
     "db": settings.serhio_db,
     "user": settings.serhio_db_user,
@@ -66,7 +57,7 @@ db_params_seghio = {
     "host": settings.serhio_db_host,
     "port": settings.serhio_db_port,
 }
-kl_db_service = Database_Service(kl_db_params, pool_size=15)
+
 db_service = Database_Service(db_params_seghio, pool_size=15)
 
 BASE_URL = 'http://fastapi-app:8000'
@@ -306,8 +297,6 @@ def prepare_hk_ta(self):
         prices_update_date = loop.run_until_complete(db_service.execute_query(init_sql_query))
         logger.info(f"Finished events: {prices_update_date}")
 
-
-        # results = loop.run_until_complete(kl_db_service.execute_query(sql_query))
 
         if prices_update_date:
                 logger.info(f"Data found and processed, {prices_update_date[0][0]}")
