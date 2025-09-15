@@ -2,6 +2,7 @@
 
 from typing import List, Dict
 from celery import Celery, chord
+from celery.exceptions import Retry
 import os
 import asyncio
 import requests
@@ -47,7 +48,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 10
+MAX_ATTEMPTS = 2
 
 # DB agents
 db_params_seghio = {
@@ -92,7 +93,7 @@ def prepare_hk_energy_task(self, trade_day: str):
 
             # Send tasks to process HK Energy
             stock_data_2800_dict = [record.dict() for record in prepared_2800_data]
-            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])] #! REMOVE
+            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])[:10]] #! REMOVE
 
             chord(tasks)(clear_hk_energy_token.s())
         finally:
@@ -329,47 +330,39 @@ def prepare_hk_ta(self):
 
 
                 # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]] #! REMOVE
-                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]
+                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"][:10]]
 
                 chord(tasks)(clear_hk_ta_token.s(trade_day_date)) 
         else:
-                # No data found - retry after 1 minute
-                attempt = getattr(self.request, 'retries', 0) + 1
+                cur = getattr(self.request, "retries", 0)
+                attempt = cur + 1
+                logger.info(f"No data found, attempt {attempt} of {MAX_ATTEMPTS}")
                 
-                
-                if attempt >= MAX_ATTEMPTS:
+                if cur >= MAX_ATTEMPTS - 1:
                     logger.warning(f"HK TA check timeout after {MAX_ATTEMPTS} attempts")
 
-                    # Set retry task after
+                    # ваші дії після таймауту
                     loop.run_until_complete(scheduler.schedule_retry_task(delay_hours=settings.daily_retry))
+                    loop.run_until_complete(file_service.clear_file_content(settings.hk_ta_token_file_name))
 
-                    # Clear hk_ta_token
-                    results = loop.run_until_complete(file_service.clear_file_content(settings.hk_ta_token_file_name))
-
-
-                    
-                    return {
-                        "status": "timeout",
-                        "message": f"No data found after {MAX_ATTEMPTS} attempts",
-                        "attempts": attempt
-                    }
-                
-                logger.info(f"No data found, retrying in 1 minute (attempt {attempt}/{MAX_ATTEMPTS})")
-                raise self.retry(countdown=60, max_retries=MAX_ATTEMPTS)
+                    # Позначили як успіх/таймаут і ВАЖЛИВО: завершуємося return-ом
+                    self.update_state(
+                        state='SUCCESS',
+                        meta={'status': 'timeout',
+                            'message': f'No data found after {MAX_ATTEMPTS} attempts',
+                            'attempts': attempt}
+                    )
+                    return {'status': 'timeout', 'attempts': attempt}
+                raise self.retry(countdown=60)
 
     
+    except Retry:
+    # Це нормальний потік керування Celery під час ретраю
+        raise
     except Exception as exc:
-        # Check if it's a Celery retry exception
-        if 'Retry' in str(exc):
-            logger.info(f"Task retry scheduled: {str(exc)}")
-            raise exc
-        else:
-            logger.error(f"Error in check_hk_ta_task: {str(exc)}")
-            self.update_state(
-                state='FAILURE',
-                meta={'error': str(exc)}
-            )
-            raise exc
+        logger.error(f"Error in check_hk_ta_task: {str(exc)}")
+        self.update_state(state='FAILURE', meta={'error': str(exc)})
+        raise
     finally: 
         if loop:
             loop.close()

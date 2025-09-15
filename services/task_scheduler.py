@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from config.settings import settings
 from services.file_services import FileService
-from services.queue_service import celery_app, retry_hk_ta_task
+from services.queue_service import celery_app
 from config.logger import setup_logger
 
 logger = setup_logger("task_scheduler")
@@ -14,6 +14,7 @@ class TaskScheduler:
     async def schedule_retry_task(self, delay_hours: int = settings.daily_retry):
         """Add task to retry HK TA after delay_hours hours"""
         try:
+            from services.queue_service import retry_hk_ta_task 
             await self.cancel_existing_retry_task()
             
             delay_seconds = delay_hours * 3600
