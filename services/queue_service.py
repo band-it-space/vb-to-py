@@ -269,7 +269,7 @@ def process_hk_ta_task(self, stock_code: str, trade_day: str, data_2800: List[Di
         )
         raise exc
 
-@celery_app.task(bind=True, name='prepare_hk_ta')
+@celery_app.task(bind=True, name='prepare_hk_ta', max_retries=MAX_ATTEMPTS-1, default_retry_delay=60)
 def prepare_hk_ta(self):
     """
     Celery task to check HK TA database status with retry mechanism
@@ -361,7 +361,7 @@ def prepare_hk_ta(self):
         raise
     except Exception as exc:
         logger.error(f"Error in check_hk_ta_task: {str(exc)}")
-        self.update_state(state='FAILURE', meta={'error': str(exc)})
+        # self.update_state(state='FAILURE', meta={'error': str(exc)})
         raise
     finally: 
         if loop:
