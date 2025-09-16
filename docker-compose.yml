@@ -11,6 +11,7 @@ services:
             - RABBITMQ_DEFAULT_PASS=password
         volumes:
             - rabbitmq_data:/var/lib/rabbitmq
+            - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
         restart: unless-stopped
 
     redis:

@@ -48,7 +48,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
 )
 #720
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 720
 
 # DB agents
 db_params_seghio = {
@@ -93,7 +93,7 @@ def prepare_hk_energy_task(self, trade_day: str):
 
             # Send tasks to process HK Energy
             stock_data_2800_dict = [record.dict() for record in prepared_2800_data]
-            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])[:10]] #! REMOVE
+            tasks = [process_hk_energy_task.s(code, stock_data_2800_dict, trade_day) for code in stocks_codes.get("codes", [])] #! REMOVE
 
             chord(tasks)(clear_hk_energy_token.s())
         finally:
@@ -330,7 +330,7 @@ def prepare_hk_ta(self):
 
 
                 # tasks = [process_hk_ta_task.s(code, response_data["date"]) for code in response_data["codes"][:10]] #! REMOVE
-                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"][:10]]
+                tasks = [process_hk_ta_task.s(code, trade_day_date, data_2800) for code in response_data["codes"]]
 
                 chord(tasks)(clear_hk_ta_token.s(trade_day_date)) 
         else:
